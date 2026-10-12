@@ -107,8 +107,22 @@ jobs:
             echo "::error::SSH_PRIVATE_KEY contains a PUBLIC key (the .pub file). Paste the private key instead: the output of 'cat ~/.ssh/pieceful_deploy' (no .pub)."
             exit 1
           fi
-          if ! grep -q -- '-----BEGIN .*PRIVATE KEY-----' "$RUNNER_TEMP/deploy_key" || ! grep -q -- '-----END .*PRIVATE KEY-----' "$RUNNER_TEMP/deploy_key"; then
-            echo "::error::SSH_PRIVATE_KEY is not a complete private key. Paste the whole output of 'cat ~/.ssh/pieceful_deploy', including the -----BEGIN … and -----END … lines."
+          complete() { grep -q -- '-----BEGIN .*PRIVATE KEY-----' "$1" && grep -q -- '-----END .*PRIVATE KEY-----' "$1"; }
+          # Also accept the key as a single base64 line (output of: base64 -w0 ~/.ssh/pieceful_deploy).
+          if ! complete "$RUNNER_TEMP/deploy_key"; then
+            printf '%s' "$KEY" | tr -d '\r\n\t ' | base64 -d > "$RUNNER_TEMP/deploy_key.b64" 2>/dev/null || true
+            if [ -s "$RUNNER_TEMP/deploy_key.b64" ] && complete "$RUNNER_TEMP/deploy_key.b64"; then
+              tr -d '\r' < "$RUNNER_TEMP/deploy_key.b64" > "$RUNNER_TEMP/deploy_key"
+              echo "Using base64-encoded SSH_PRIVATE_KEY"
+            fi
+            rm -f "$RUNNER_TEMP/deploy_key.b64"
+          fi
+          if ! complete "$RUNNER_TEMP/deploy_key"; then
+            f="$RUNNER_TEMP/deploy_key"
+            yn() { if grep -q -- "$1" "$f"; then echo yes; else echo no; fi; }
+            # Safe diagnostics only: sizes and markers, never the key material.
+            echo "SSH_PRIVATE_KEY diagnostics: lines=$(wc -l < "$f") chars=$(wc -c < "$f") has_BEGIN=$(yn '-----BEGIN') has_END=$(yn '-----END') has_PRIVATE_KEY=$(yn 'PRIVATE KEY')"
+            echo "::error::SSH_PRIVATE_KEY is not a complete private key. Paste the whole output of 'cat ~/.ssh/pieceful_deploy' (including the -----BEGIN … and -----END … lines), or the single line printed by 'base64 -w0 ~/.ssh/pieceful_deploy'."
             exit 1
           fi
           echo "ready=true" >> "$GITHUB_OUTPUT"
