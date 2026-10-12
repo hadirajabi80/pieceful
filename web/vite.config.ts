@@ -1,10 +1,20 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import { writeFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 
 export default defineConfig({
   plugins: [
     react(),
+    // emptyOutDir wipes server/dist; keep the placeholder so go:embed always has a file in a fresh checkout.
+    {
+      name: 'keep-dist-placeholder',
+      apply: 'build',
+      closeBundle() {
+        writeFileSync(fileURLToPath(new URL('../server/dist/.gitkeep', import.meta.url)), '')
+      },
+    },
     VitePWA({
       registerType: 'prompt',
       injectRegister: 'auto',

@@ -37,7 +37,10 @@ jobs:
           go-version-file: server/go.mod
       - name: go vet
         working-directory: server
-        run: go vet ./...
+        run: |
+          # go:embed needs at least one file in dist/ (the real site is built in the Docker image)
+          mkdir -p dist && touch dist/.gitkeep
+          go vet ./...
 
   image:
     name: Build & push image
