@@ -1,0 +1,141 @@
+name: CI / Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+  CONTAINER: pieceful
+  # Host port on the server (container listens on 8080).
+  APP_PORT: '6060'
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+      - name: go vet
+        working-directory: server
+        run: go vet ./...
+
+  image:
+    name: Build & push image
+    needs: test
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: tag
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to server
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+    environment:
+      name: production
+      url: http://${{ vars.DEPLOY_HOST || '167.233.87.63' }}:6060
+    steps:
+      - name: Check deploy secrets
+        id: check
+        env:
+          KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          USER: ${{ secrets.SSH_USER }}
+        run: |
+          if [ -z "$KEY" ] || [ -z "$USER" ]; then
+            echo "::warning::SSH_PRIVATE_KEY / SSH_USER secrets are not set — skipping deploy. See README → Deployment."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Pull & restart container over SSH
+        if: steps.check.outputs.ready == 'true'
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          IMAGE_REF: ${{ env.IMAGE }}:${{ needs.image.outputs.tag }}
+          IMAGE: ${{ env.IMAGE }}
+          CONTAINER: ${{ env.CONTAINER }}
+          APP_PORT: ${{ env.APP_PORT }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ vars.DEPLOY_HOST || '167.233.87.63' }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: IMAGE_REF,IMAGE,CONTAINER,APP_PORT,GHCR_USER,GHCR_TOKEN
+          script_stop: true
+          script: |
+            set -eu
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            docker pull "$IMAGE_REF"
+            docker logout ghcr.io
+
+            docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+            docker run -d --name "$CONTAINER" \
+              --restart unless-stopped \
+              -p "$APP_PORT:8080" \
+              --log-opt max-size=10m --log-opt max-file=3 \
+              "$IMAGE_REF"
+
+            # Wait for the container's health check.
+            for i in $(seq 1 30); do
+              status=$(docker inspect -f '{{.State.Health.Status}}' "$CONTAINER" 2>/dev/null || echo starting)
+              if [ "$status" = "healthy" ]; then echo "Pieceful is healthy on port $APP_PORT"; break; fi
+              if [ "$i" = 30 ]; then echo "Container did not become healthy"; docker logs --tail 50 "$CONTAINER"; exit 1; fi
+              sleep 2
+            done
+
+            # Keep only the running Pieceful image (+ a couple of previous ones for rollback).
+            docker images "$IMAGE" --format '{{.Repository}}:{{.Tag}}' | grep -v ':latest$' | grep -vx "$IMAGE_REF" | tail -n +3 | xargs -r docker rmi >/dev/null 2>&1 || true

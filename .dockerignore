@@ -1,0 +1,10 @@
+**/node_modules
+.git
+.github
+.claude
+bin
+docs
+server/dist
+web/.art-src
+web/dev-dist
+**/*.tsbuildinfo

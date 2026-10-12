@@ -1,0 +1,123 @@
+/* Pieceful v2 design tokens (DESIGN.md §5). Theme is set on <html data-theme="light|dark">. */
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f6f4f1;
+  --surface: #ffffff;
+  --surface-2: #efece8;
+  --surface-3: #e7e3de;
+  --surface-glass: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.45);
+  --border: #e3ded8;
+  --border-strong: #cfc8c0;
+  --text: #221f26;
+  --text-2: #5c5661;
+  --text-muted: #8a8390;
+  --accent: #e26a8a;
+  --accent-hover: #d65a7c;
+  --accent-soft: #f8dce4;
+  --accent-ink: #b8466a;
+  --mint: #3fa796;
+  --mint-soft: #d9f1ec;
+  --mint-ink: #237a6b;
+  --amber: #d99a2b;
+  --amber-soft: #f8ecd2;
+  --amber-ink: #8f5f0c;
+  --lilac: #8a74d6;
+  --lilac-soft: #e7e1f8;
+  --danger: #d45a5a;
+  --on-accent: #ffffff;
+  --shadow-rgb: 30 20 35;
+  --scrim-rgb: 14 10 18;
+  --focus: #e26a8a;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #121216;
+  --surface: #1b1b21;
+  --surface-2: #24242c;
+  --surface-3: #2c2c35;
+  --surface-glass: rgb(27 27 33 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --border: #2f2f38;
+  --border-strong: #42424d;
+  --text: #f2eff4;
+  --text-2: #b9b3c0;
+  --text-muted: #847e8c;
+  --accent: #f08aa6;
+  --accent-hover: #f49db5;
+  --accent-soft: #3a2530;
+  --accent-ink: #f6a9be;
+  --mint: #5fc4b3;
+  --mint-soft: #1d3632;
+  --mint-ink: #7ed6c7;
+  --amber: #e8b14e;
+  --amber-soft: #3a2f1b;
+  --amber-ink: #f0c879;
+  --lilac: #a593e6;
+  --lilac-soft: #2c2740;
+  --danger: #e07474;
+  --on-accent: #1b1016;
+  --shadow-rgb: 0 0 0;
+  --scrim-rgb: 0 0 0;
+  --focus: #f08aa6;
+}
+
+:root {
+  --font: 'Nunito Variable', ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif;
+
+  /* radii */
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  /* type scale */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 22px;
+  --fs-2xl: 28px;
+  --fs-3xl: 36px;
+  --fw-body: 600;
+  --fw-label: 700;
+  --fw-title: 800;
+  --ls-title: -0.015em;
+
+  /* elevation */
+  --sh-sm: 0 1px 2px rgb(var(--shadow-rgb) / 0.06), 0 1px 3px rgb(var(--shadow-rgb) / 0.06);
+  --sh-md: 0 2px 6px -2px rgb(var(--shadow-rgb) / 0.1), 0 10px 24px -10px rgb(var(--shadow-rgb) / 0.22);
+  --sh-lg: 0 4px 12px -4px rgb(var(--shadow-rgb) / 0.12), 0 24px 56px -16px rgb(var(--shadow-rgb) / 0.34);
+  --sh-glass: 0 8px 28px -10px rgb(var(--shadow-rgb) / 0.3);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-enter: 320ms;
+
+  /* layout */
+  --gutter: 16px;
+  --content-max: 1180px;
+  --topbar-h: 60px;
+
+}
+
+
+@media (min-width: 720px) {
+  :root {
+    --gutter: 28px;
+    --topbar-h: 68px;
+  }
+}
+
+@media (min-width: 1100px) {
+  :root {
+    --gutter: 40px;
+  }
+}

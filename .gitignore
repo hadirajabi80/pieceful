@@ -1,0 +1,10 @@
+node_modules/
+bin/
+server/dist/*
+!server/dist/.gitkeep
+web/dev-dist/
+web/.art-src/
+*.tsbuildinfo
+.claude/
+.DS_Store
+Thumbs.db

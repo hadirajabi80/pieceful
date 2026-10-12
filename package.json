@@ -1,0 +1,20 @@
+{
+  "name": "pieceful",
+  "private": true,
+  "workspaces": ["web"],
+  "scripts": {
+    "dev": "npm run dev -w web",
+    "build:web": "npm run build -w web",
+    "build:server": "go build -C server -o ../bin/pieceful.exe .",
+    "build:server:linux": "cross-env GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -C server -o ../bin/pieceful-linux .",
+    "build": "npm run build:web && npm run build:server",
+    "start": "cd bin && pieceful.exe",
+    "serve": "npm run build:web && go run -C server .",
+    "icons": "npm run icons -w web",
+    "test": "npm run test -w web",
+    "typecheck": "npm run typecheck -w web"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0"
+  }
+}
